@@ -1,5 +1,6 @@
 <?php
 require_once "./monsta.exceptions.php";
+require_once "./monsta.modifiers.php";
 require_once "./monsta.php";
 
 use CookieMonsta\Monsta;
@@ -9,7 +10,7 @@ use CookieMonsta\CookieNotEdible;
 $monsta = new Monsta();
 
 try {
-	echo $monsta->feed_on_cookie(
+	$monsta->feed_on_cookie(
 		"./index.cookie",
 		[]
 	);

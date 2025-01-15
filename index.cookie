@@ -1,4 +1,14 @@
-{! \if 1 == 1 !}
-	<h3>You fed a cookie to the monsta!</h3>
-	<p>this template has been rendered successfully</p>
-{! /if !}
+<!doctype html>
+<html>
+	<head>
+		<title>My first CookieMonsta template!</title>
+	</head>
+	<body>
+		{\if 1 == 1 !}
+			<h3>You fed a cookie to the monsta!</h3>
+			<p>this template has been rendered successfully</p>
+			<p>display 1: {= null|strval =}</p>
+			<p>display 2: {= 1==1|strval =}</p>
+		{/if!}
+	</body>
+</html>
