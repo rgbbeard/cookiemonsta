@@ -8,9 +8,8 @@ use CookieMonsta\CookieNotEdible;
 
 $monsta = new Monsta();
 
-
 try {
-	echo $monsta->feed_a_cookie(
+	echo $monsta->feed_on_cookie(
 		"./index.cookie",
 		[]
 	);
