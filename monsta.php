@@ -21,7 +21,7 @@ class Monsta {
 	private const base_path = "/home/davide/programs/cookiemonsta";
 
 	private const cache_file = self::base_path . "/cached.json";
-	private array $cached_files;
+	private array $cached_files = [];
 
 	private const target_dir = self::base_path . "/generated";
 
@@ -33,9 +33,8 @@ class Monsta {
 
 	public function __construct() {
 		$this->modifiers = new Modifiers();
-		$this->cached_files = new stdClass();
 
-		$this->spit_all_out();
+		$this->clean_mouth();
 
 		if(!file_exists(self::cache_file)) {
 			$handle = fopen(self::cache_file, "c");
@@ -55,18 +54,14 @@ class Monsta {
 	 *
 	 * @throws CookieNotEdible
 	 * @throws CookieNotAvailable
+	 * @throws BadCookieDough
 	 */
-	public function feed_on_cookie(
-		string $cookie_name,
-		array $params = []
-	) {
+	public function feed_on_cookie(string $cookie_name): string {
 		$this->cookie_name = $cookie_name;
 
 		if(!$this->is_cached($cookie_name)) {
 			$this->cookie_tag = $this->generate_cookie_tag();
 		}
-
-		$this->cookie_flavour = $params;
 
 		if($this->is_available()) {
 			$this->cookie = file_get_contents($cookie_name);
@@ -74,6 +69,7 @@ class Monsta {
 			if($this->is_edible()) {
 				$this->chew();
 				$this->digest();
+				return $this->cookie_tag;
 			} else {
 				CookieNotEdible::set_cookie($cookie_name);
 				throw new CookieNotEdible();
@@ -85,11 +81,13 @@ class Monsta {
 	}
 
 	# reset the rendering process
-	public function spit_all_out() {
+	public function clean_mouth() {
 		$this->cookie_name = "";
+		$this->cookie_tag = "";
 		$this->cookie_flavour = [];
 		$this->cookie = "";
 		$this->digestion_process = [];
+		$this->cached_files = [];
 	}
 
 	private function is_edible(): bool {
@@ -103,8 +101,8 @@ class Monsta {
 	private function is_cached(string $cookie_name): bool {
 		if(!empty($this->cached_files)) {
 			foreach($this->cached_files as $cache) {
-				if($cache["template"] === $this->cookie_name) {
-					$this->cookie_tag = $cache["generated_file"];
+				if($cache->template === $this->cookie_name) {
+					$this->cookie_tag = $cache->generated_file;
 					return true;
 				}
 			}
@@ -135,6 +133,7 @@ class Monsta {
 	 * reads the cookie content
 	 * 
 	 * @throws BadCookieDough
+	 * @throws WeirdCookieTaste
 	 */
 	private function chew() {
 		foreach(explode("\n", $this->cookie) as $line => $content) {
@@ -194,7 +193,16 @@ class Monsta {
 		string $opening, 
 		int $line
 	) {
+		# remove tags
+		$opening = str_replace("{\\", "", $opening);
+		$opening = str_replace(" !}", "", $opening);
 
+		preg_match("/^[a-z]+\s/", $opening, $keywords);
+
+		$condition = str_replace($keywords[0], "", $opening);
+		$keyword = trim($keywords[0]);
+
+		$this->digestion_process[] = "<?php $keyword($condition) { ?>" . PHP_EOL;
 	}
 
 	private function transcribe_closure(
@@ -228,13 +236,17 @@ class Monsta {
 			}
 		}
 
-		$this->digestion_process[] = "<?php echo $value; ?>" . PHP_EOL;
+		$this->digestion_process[] = "<?php echo \"$value\"; ?>" . PHP_EOL;
 	}
 
 	private function transcribe_declaration(
 		string $declaration,
 		int $line
 	) {
+		# remove tags
+		$declaration = str_replace("{% ", "", $declaration);
+		$declaration = str_replace(" %}", "", $declaration);
+
 		$this->digestion_process[] = "<?php $declaration; ?>" . PHP_EOL;
 	}
 }

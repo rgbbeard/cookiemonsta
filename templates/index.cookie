@@ -9,7 +9,8 @@
 			<p>this template has been rendered successfully</p>
 			{\for $x = 0; $x <= 10; $x++ !}
 				{% $x = $x+1 %}
-				counting{= $x =}<br/>
+				counting {= $x =}
+				<br/>
 			{/for!}
 		{/if!}
 	</body>

@@ -275,6 +275,7 @@ class Modifiers {
 	}
 
 	public function is_modifier(string $modifier): bool {
+		# TODO: add custom modifiers
 		return false;
 	}
 }
