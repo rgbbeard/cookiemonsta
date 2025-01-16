@@ -7,8 +7,10 @@
 		{\if 1 == 1 !}
 			<h3>You fed a cookie to the monsta!</h3>
 			<p>this template has been rendered successfully</p>
-			<p>display 1: {= null|strval =}</p>
-			<p>display 2: {= 1==1|strval =}</p>
+			{\for $x = 0; $x <= 10; $x++ !}
+				{% $x = $x+1 %}
+				counting{= $x =}<br/>
+			{/for!}
 		{/if!}
 	</body>
 </html>

@@ -11,7 +11,7 @@ $monsta = new Monsta();
 
 try {
 	$monsta->feed_on_cookie(
-		"./index.cookie",
+		"./templates/index.cookie",
 		[]
 	);
 } catch (CookieNotAvailable|CookieNotEdible $e) {

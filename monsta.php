@@ -1,6 +1,8 @@
 <?php
 namespace CookieMonsta;
 
+use \stdClass;
+
 class Monsta {
 	# the template name
 	private string $cookie_name = "";
@@ -14,23 +16,37 @@ class Monsta {
 
 	private const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-	
-	private array $accepted_modifiers = [];
+	private Modifiers $modifiers;
 
-	private const cache_path = "/home/davide/programs/cookiemonsta";
-	private const cache_file = self::cache_path . "/cached.json";
+	private const base_path = "/home/davide/programs/cookiemonsta";
+
+	private const cache_file = self::base_path . "/cached.json";
+	private array $cached_files;
+
+	private const target_dir = self::base_path . "/generated";
 
 	private const opening_pattern = "^\{\\\[a-z]+\s";
 	private const begin_condition_pattern = self::opening_pattern . ".*\s\!\}$";
 	private const end_condition_pattern = "^\{\/[a-z]+\!\}$";
 	private const display_pattern = "\{\=\s.*\s\=\}";
+	private const declaration_pattern = "\{\%\s.*\s\%\}";
 
 	public function __construct() {
+		$this->modifiers = new Modifiers();
+		$this->cached_files = new stdClass();
+
 		$this->spit_all_out();
 
 		if(!file_exists(self::cache_file)) {
 			$handle = fopen(self::cache_file, "c");
+			fwrite($handle, json_encode([]));
 			fclose($handle);
+		} else {
+			try {
+				$this->load_cache();
+			} catch(Exception $e) {
+				throw new Exception("Invalid cache file");
+			}
 		}
 	}
 	
@@ -43,8 +59,13 @@ class Monsta {
 	public function feed_on_cookie(
 		string $cookie_name,
 		array $params = []
-	): string {
+	) {
 		$this->cookie_name = $cookie_name;
+
+		if(!$this->is_cached($cookie_name)) {
+			$this->cookie_tag = $this->generate_cookie_tag();
+		}
+
 		$this->cookie_flavour = $params;
 
 		if($this->is_available()) {
@@ -52,7 +73,7 @@ class Monsta {
 
 			if($this->is_edible()) {
 				$this->chew();
-				return $this->digest();
+				$this->digest();
 			} else {
 				CookieNotEdible::set_cookie($cookie_name);
 				throw new CookieNotEdible();
@@ -79,13 +100,40 @@ class Monsta {
 		return file_exists($this->cookie_name);
 	}
 
-	private function is_cached(): bool {
-		# TODO: write this function
+	private function is_cached(string $cookie_name): bool {
+		if(!empty($this->cached_files)) {
+			foreach($this->cached_files as $cache) {
+				if($cache["template"] === $this->cookie_name) {
+					$this->cookie_tag = $cache["generated_file"];
+					return true;
+				}
+			}
+		}
+
 		return false;
+	}
+
+	private function load_cache() {
+		$raw_json = file_get_contents(self::cache_file);
+		$this->cached_files = (array) json_decode($raw_json);
+	}
+
+	private function cache_cookie() {
+		$this->cached_files[] = [
+			"template" => $this->cookie_name,
+			"generated_file" => $this->cookie_tag
+		];
+
+		$handle = fopen(self::cache_file, "w");
+		fwrite($handle, json_encode($this->cached_files));
+		fclose($handle);
+
+		$this->load_cache();
 	}
 	
 	/**
 	 * reads the cookie content
+	 * 
 	 * @throws BadCookieDough
 	 */
 	private function chew() {
@@ -104,16 +152,24 @@ class Monsta {
 				$this->transcribe_closure($clean_content, $line);
 			} elseif(preg_match("/" . self::display_pattern . "/", $clean_content, $matches)) {
 				$this->transcribe_display($clean_content, $line);
+			} elseif(preg_match("/" . self::declaration_pattern . "/", $clean_content, $matches)) {
+				$this->transcribe_declaration($clean_content, $line);
 			} else {
-				# plain html
-				# TODO: complete this part
+				$this->digestion_process[] = $clean_content . PHP_EOL;
 			}
 		}
 	}
-	
-	# render the chewed content
-	private function digest(): string {
-		return "";
+
+	private function digest() {
+		$handle = fopen(self::target_dir . "/" . $this->cookie_tag . ".php", "w+");
+
+		foreach($this->digestion_process as $line) {
+			fwrite($handle, $line, strlen($line));
+		}
+
+		fclose($handle);
+
+		$this->cache_cookie();
 	}
 
 	private function generate_cookie_tag(): string {
@@ -138,21 +194,14 @@ class Monsta {
 		string $opening, 
 		int $line
 	) {
-		var_dump($opening);
+
 	}
 
 	private function transcribe_closure(
 		string $closure, 
 		int $line
 	) {
-		var_dump($closure, $line);
-	}
-
-	/**
-	 * @throws NoSuchModifier
-	 */
-	private function is_modifier(string $modifier): bool {
-		return false;
+		$this->digestion_process[] = "<?php } ?>" . PHP_EOL;
 	}
 
 	/**
@@ -167,21 +216,25 @@ class Monsta {
 		$display = str_replace(" =}", "", $display);
 
 		$modifiers = explode("|", $display);
+		$value = array_shift($modifiers);
 
+		# TODO: complete this part
 		if(count($modifiers) > 1) {
 			foreach($modifiers as $modifier) {
 				# is modifier supported
-				if(!$this->is_modifier($modifier)) {
-
-				}
-
-				# is modifier valid?
-				if(false) {
-
+				if(!$this->modifiers->is_native_modifier($modifier)) {
+					$infos = $this->modifiers->get_native_modifier_infos($modifier);
 				}
 			}
 		}
 
-		var_dump($modifiers);
+		$this->digestion_process[] = "<?php echo $value; ?>" . PHP_EOL;
+	}
+
+	private function transcribe_declaration(
+		string $declaration,
+		int $line
+	) {
+		$this->digestion_process[] = "<?php $declaration; ?>" . PHP_EOL;
 	}
 }

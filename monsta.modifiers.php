@@ -1,39 +1,280 @@
 <?php 
 namespace CookieMonsta;
 
+use \ReflectionFunction;
+use \Exception;
+
 class Modifiers {
-	/**
-	 * @pattern(none)
-	 */
-	private static function ucfirst(string $target): string {
+	private const native_modifiers = [
+	    "abs",
+	    "array",
+	    "array_pop",
+	    "array_product",
+	    "array_push",
+	    "array_rand",
+	    "array_reduce",
+	    "array_replace",
+	    "array_reverse",
+	    "array_shift",
+	    "array_slice",
+	    "array_splice",
+	    "array_sum",
+	    "array_unique",
+	    "array_unshift",
+	    "array_values",
+	    "arsort",
+	    "base64_decode",
+	    "base64_encode",
+	    "basename",
+	    "base_convert",
+	    "bin2hex",
+	    "bindec",
+	    "boolval",
+	    "ceil",
+	    "constant",
+	    "convert_cyr_string",
+	    "convert_uudecode",
+	    "convert_uuencode",
+	    "cos",
+	    "cosh",
+	    "count",
+	    "date",
+	    "date_add",
+	    "date_create",
+	    "date_create_from_format",
+	    "date_create_immutable",
+	    "date_create_immutable_from_format",
+	    "date_date_set",
+	    "date_default_timezone_get",
+	    "date_diff",
+	    "date_format",
+	    "date_interval_create_from_date_string",
+	    "date_interval_format",
+	    "date_modify",
+	    "date_offset_get",
+	    "date_parse",
+	    "date_parse_from_format",
+	    "date_sub",
+	    "date_sunrise",
+	    "date_sunset",
+	    "date_timestamp_get",
+	    "date_timezone_get",
+	    "decbin",
+	    "dechex",
+	    "decoct",
+	    "doubleval",
+	    "echo",
+	    "empty",
+	    "exp",
+	    "explode",
+	    "floatval",
+	    "floor",
+	    "gettimeofday",
+	    "gettype",
+	    "gregoriantojd",
+	    "hash",
+	    "hebrev",
+	    "hebrevc",
+	    "hex2bin",
+	    "hexdec",
+	    "implode",
+	    "isset",
+	    "is_a",
+	    "is_array",
+	    "is_bool",
+	    "is_countable",
+	    "is_dir",
+	    "is_double",
+	    "is_file",
+	    "is_finite",
+	    "is_float",
+	    "is_infinite",
+	    "is_int",
+	    "is_integer",
+	    "is_iterable",
+	    "is_long",
+	    "is_nan",
+	    "is_null",
+	    "is_numeric",
+	    "is_object",
+	    "is_string",
+	    "jddayofweek",
+	    "jdmonthname",
+	    "jdtofrench",
+	    "jdtogregorian",
+	    "jdtojewish",
+	    "jdtojulian",
+	    "jdtounix",
+	    "jewishtojd",
+	    "join",
+	    "json_decode",
+	    "json_encode",
+	    "localeconv",
+	    "localtime",
+	    "log",
+	    "log1p",
+	    "log10",
+	    "long2ip",
+	    "lstat",
+	    "ltrim",
+	    "max",
+	    "mb_convert_case",
+	    "mb_convert_encoding",
+	    "mb_convert_kana",
+	    "mb_convert_variables",
+	    "mb_decode_mimeheader",
+	    "mb_decode_numericentity",
+	    "mb_detect_encoding",
+	    "mb_detect_order",
+	    "mb_encode_mimeheader",
+	    "mb_encode_numericentity",
+	    "mb_encoding_aliases",
+	    "mb_ereg",
+	    "mb_eregi",
+	    "mb_eregi_replace",
+	    "mb_ereg_match",
+	    "mb_ereg_replace",
+	    "mb_ereg_replace_callback",
+	    "mb_ereg_search",
+	    "mb_ereg_search_getpos",
+	    "mb_ereg_search_getregs",
+	    "mb_ereg_search_init",
+	    "mb_ereg_search_pos",
+	    "mb_ereg_search_regs",
+	    "mb_ereg_search_setpos",
+	    "mb_get_info",
+	    "mb_http_input",
+	    "mb_http_output",
+	    "mb_internal_encoding",
+	    "mb_language",
+	    "mb_lcfirst",
+	    "mb_list_encodings",
+	    "mb_ltrim",
+	    "mb_ord",
+	    "mb_output_handler",
+	    "mb_parse_str",
+	    "mb_preferred_mime_name",
+	    "mb_regex_encoding",
+	    "mb_regex_set_options",
+	    "mb_rtrim",
+	    "mb_scrub",
+	    "mb_send_mail",
+	    "mb_split",
+	    "mb_strcut",
+	    "mb_strimwidth",
+	    "mb_stripos",
+	    "mb_stristr",
+	    "mb_strlen",
+	    "mb_strpos",
+	    "mb_strrchr",
+	    "mb_strrichr",
+	    "mb_strripos",
+	    "mb_strrpos",
+	    "mb_strstr",
+	    "mb_strtolower",
+	    "mb_strtoupper",
+	    "mb_strwidth",
+	    "mb_str_pad",
+	    "mb_str_split",
+	    "mb_substitute_character",
+	    "mb_substr",
+	    "mb_substr_count",
+	    "mb_trim",
+	    "mb_ucfirst",
+	    "md5",
+	    "metaphone",
+	    "method_exists",
+	    "microtime",
+	    "min",
+	    "mkdir",
+	    "mktime",
+	    "print",
+	    "printf",
+	    "print_r",
+	    "rand",
+	    "round",
+	    "sha1",
+	    "sin",
+	    "sinh",
+	    "sizeof",
+	    "sort",
+	    "sqrt",
+	    "stripcslashes",
+	    "stripos",
+	    "stripslashes",
+	    "strip_tags",
+	    "stristr",
+	    "strlen",
+	    "strnatcasecmp",
+	    "strnatcmp",
+	    "strncasecmp",
+	    "strncmp",
+	    "strpbrk",
+	    "strpos",
+	    "strptime",
+	    "strrchr",
+	    "strrev",
+	    "strripos",
+	    "strrpos",
+	    "strspn",
+	    "strstr",
+	    "strtok",
+	    "strtolower",
+	    "strtotime",
+	    "strtoupper",
+	    "strtr",
+	    "strval",
+	    "str_contains",
+	    "str_decrement",
+	    "str_ends_with",
+	    "str_getcsv",
+	    "str_increment",
+	    "str_ireplace",
+	    "str_pad",
+	    "str_repeat",
+	    "str_replace",
+	    "str_rot13",
+	    "str_shuffle",
+	    "str_split",
+	    "str_starts_with",
+	    "str_word_count",
+	    "substr",
+	    "substr_compare",
+	    "substr_count",
+	    "substr_replace",
+	    "tempnam",
+	    "time",
+	    "trim",
+	    "ucfirst",
+	    "ucwords",
+	    "urldecode",
+	    "urlencode",
+	    "utf8_decode",
+	    "utf8_encode",
+	    "var_dump"
+	];
 
-	}
-	
-	/**
-	 * @pattern(none)
-	 */
-	private static function intval($target): ?int {
-		
-	}
-	
-	/**
-	 * @pattern(none)
-	 */
-	private static function strval($target): string {
-		
-	}
-	
-	/**
-	 * @pattern(none)
-	 */
-	private static function strtolower(string $target) {
-		
+	public function is_native_modifier(string $modifier): bool {
+		return in_array($modifier, self::native_modifiers);
 	}
 
-	/**
-	 * @pattern(none)
-	 */
-	private static function strtoupper(string $target) {
-		
+	public function get_native_modifier_infos(string $modifier): array {
+		$infos = [];
+
+		try {
+			$reflection = new ReflectionFunction($modifier);
+
+			# Array<ReflectionParameter>
+			$infos["parameters"] = $reflection->getParameters();
+		} catch(\Exception $e) {
+			print_r($e);
+			die();
+		}
+
+		return $infos;
+	}
+
+	public function is_modifier(string $modifier): bool {
+		return false;
 	}
 }
