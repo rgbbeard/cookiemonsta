@@ -7,4 +7,4 @@ use CookieMonsta\Monsta;
 
 $monsta = new Monsta();
 
-$monsta->feed_on_cookie("./templates/index.cookie");
+include "generated/" . $monsta->feed_on_cookie("./templates/index.cookie") . ".php";

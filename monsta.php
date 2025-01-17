@@ -59,7 +59,7 @@ class Monsta {
 	public function feed_on_cookie(string $cookie_name): string {
 		$this->cookie_name = $cookie_name;
 
-		if(!$this->is_cached($cookie_name)) {
+		if(!$this->is_cached()) {
 			$this->cookie_tag = $this->generate_cookie_tag();
 		}
 
@@ -98,7 +98,7 @@ class Monsta {
 		return file_exists($this->cookie_name);
 	}
 
-	private function is_cached(string $cookie_name): bool {
+	private function is_cached(): bool {
 		if(!empty($this->cached_files)) {
 			foreach($this->cached_files as $cache) {
 				if($cache->template === $this->cookie_name) {
@@ -117,16 +117,18 @@ class Monsta {
 	}
 
 	private function cache_cookie() {
-		$this->cached_files[] = [
-			"template" => $this->cookie_name,
-			"generated_file" => $this->cookie_tag
-		];
+		if(!$this->is_cached()) {
+			$this->cached_files[] = [
+				"template" => $this->cookie_name,
+				"generated_file" => $this->cookie_tag
+			];
 
-		$handle = fopen(self::cache_file, "w");
-		fwrite($handle, json_encode($this->cached_files));
-		fclose($handle);
+			$handle = fopen(self::cache_file, "w");
+			fwrite($handle, json_encode($this->cached_files));
+			fclose($handle);
 
-		$this->load_cache();
+			$this->load_cache();
+		}
 	}
 	
 	/**
