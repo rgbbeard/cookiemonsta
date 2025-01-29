@@ -2,11 +2,26 @@
 namespace CookieMonsta;
 
 use \stdClass;
+use Maids\JSONMaid;
 
 class Monsta {
+	private const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+	private Modifiers $modifiers;
+	private JSONMaid $jsonMaid;
+
+	private const base_path = "/home/davide/programs/cookiemonsta";
+
+	private const cache_file = self::base_path . "/cached.json";
+	private array $cached_files = [];
+	# parse always
+	private bool $needs_reparsing = true;
+
+	private const target_dir = self::base_path . "/generated";
+
 	# the template name
 	private string $cookie_name = "";
-	private string $cookie_tag = "";
+	private string $cookie_tag = self::target_dir . "/";
 	# the template content
 	private string $cookie = "";
 	# the variables passed to the template
@@ -14,21 +29,10 @@ class Monsta {
 	# to store the template rendering process
 	private array $digestion_process = [];
 
-	private const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-	private Modifiers $modifiers;
-
-	private const base_path = "/home/davide/programs/cookiemonsta";
-
-	private const cache_file = self::base_path . "/cached.json";
-	private array $cached_files = [];
-
-	private const target_dir = self::base_path . "/generated";
-
 	private const opening_pattern = "^\{\\\[a-z]+\s";
 	private const begin_condition_pattern = self::opening_pattern . ".*\s\!\}$";
 	private const end_condition_pattern = "^\{\/[a-z]+\!\}$";
-	private const display_pattern = "\{\=\s.*\s\=\}";
+	private const display_pattern = "\{\=\s.*?\s\=\}";
 	private const declaration_pattern = "\{\%\s.*\s\%\}";
 
 	public function __construct() {
@@ -60,7 +64,9 @@ class Monsta {
 		$this->cookie_name = $cookie_name;
 
 		if(!$this->is_cached()) {
-			$this->cookie_tag = $this->generate_cookie_tag();
+			$this->cookie_tag .= $this->generate_cookie_tag();
+		} elseif(!$this->needs_reparsing) {
+			return $this->cookie_tag;
 		}
 
 		if($this->is_available()) {
@@ -83,7 +89,7 @@ class Monsta {
 	# reset the rendering process
 	public function clean_mouth() {
 		$this->cookie_name = "";
-		$this->cookie_tag = "";
+		$this->cookie_tag = self::target_dir . "/";
 		$this->cookie_flavour = [];
 		$this->cookie = "";
 		$this->digestion_process = [];
@@ -103,6 +109,7 @@ class Monsta {
 			foreach($this->cached_files as $cache) {
 				if($cache->template === $this->cookie_name) {
 					$this->cookie_tag = $cache->generated_file;
+					$this->needs_reparsing = strlen(file_get_contents($this->cookie_name)) !== $cache->template_content_size;
 					return true;
 				}
 			}
@@ -112,15 +119,17 @@ class Monsta {
 	}
 
 	private function load_cache() {
-		$raw_json = file_get_contents(self::cache_file);
-		$this->cached_files = (array) json_decode($raw_json);
+		$this->jsonMaid = new JSONMaid(self::cache_file);
+
+		$this->cached_files = $this->jsonMaid->get_records();
 	}
 
 	private function cache_cookie() {
-		if(!$this->is_cached()) {
+		if(!$this->is_cached() || $this->needs_reparsing) {
 			$this->cached_files[] = [
 				"template" => $this->cookie_name,
-				"generated_file" => $this->cookie_tag
+				"generated_file" => $this->cookie_tag,
+				"template_content_size" => filesize($this->cookie_name)
 			];
 
 			$handle = fopen(self::cache_file, "w");
@@ -151,8 +160,8 @@ class Monsta {
 				$this->transcribe_opening($clean_content, $line);
 			} elseif(preg_match("/" . self::end_condition_pattern . "/", $clean_content, $matches)) {
 				$this->transcribe_closure($clean_content, $line);
-			} elseif(preg_match("/" . self::display_pattern . "/", $clean_content, $matches)) {
-				$this->transcribe_display($clean_content, $line);
+			} elseif(preg_match_all("/" . self::display_pattern . "/", $clean_content, $matches)) {
+				$this->transcribe_display($clean_content, $matches[0], $line);
 			} elseif(preg_match("/" . self::declaration_pattern . "/", $clean_content, $matches)) {
 				$this->transcribe_declaration($clean_content, $line);
 			} else {
@@ -162,9 +171,13 @@ class Monsta {
 	}
 
 	private function digest() {
-		$handle = fopen(self::target_dir . "/" . $this->cookie_tag . ".php", "w+");
+		$handle = fopen($this->cookie_tag, "w+");
 
-		foreach($this->digestion_process as $line) {
+		foreach($this->digestion_process as $index => $line) {
+			if($index === count($this->digestion_process) - 1) {
+				$line = rtrim($line);
+			}
+
 			fwrite($handle, $line, strlen($line));
 		}
 
@@ -180,7 +193,9 @@ class Monsta {
 			$num = mt_rand(0, strlen(self::charset));
 			$tag .= substr(self::charset, $num, 1);
 		}
-		
+
+		$tag .= ".php";
+
 		return $tag;
 	}
 
@@ -219,26 +234,13 @@ class Monsta {
 	 */
 	private function transcribe_display(
 		string $display,
+		array $matches,
 		int $line
 	) {
-		# remove tags
-		$display = str_replace("{= ", "", $display);
-		$display = str_replace(" =}", "", $display);
+		$display = str_replace("{= ", "<?php echo ", $display);
+		$display = str_replace(" =}", "; ?>", $display);
 
-		$modifiers = explode("|", $display);
-		$value = array_shift($modifiers);
-
-		# TODO: complete this part
-		if(count($modifiers) > 1) {
-			foreach($modifiers as $modifier) {
-				# is modifier supported
-				if(!$this->modifiers->is_native_modifier($modifier)) {
-					$infos = $this->modifiers->get_native_modifier_infos($modifier);
-				}
-			}
-		}
-
-		$this->digestion_process[] = "<?php echo \"$value\"; ?>" . PHP_EOL;
+		$this->digestion_process[] = $display . PHP_EOL;
 	}
 
 	private function transcribe_declaration(

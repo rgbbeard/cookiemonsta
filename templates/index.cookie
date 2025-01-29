@@ -2,14 +2,21 @@
 <html>
 	<head>
 		<title>My first CookieMonsta template!</title>
+		<style>
+			html, body {
+				background-color: #00f;
+				color: #fff;
+			}
+		</style>
 	</head>
 	<body>
+		paaaaaaddddddiiiiiiiinnggggg
 		{\if 1 == 1 !}
 			<h3>You fed a cookie to the monsta!</h3>
 			<p>this template has been rendered successfully</p>
 			{\for $x = 0; $x <= 10; $x++ !}
 				{% $x = $x+1 %}
-				counting {= $x =}
+				counting {= $x =}; next: {= $x + 1 =}
 				<br/>
 			{/for!}
 		{/if!}

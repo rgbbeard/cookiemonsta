@@ -254,8 +254,33 @@ class Modifiers {
 	    "var_dump"
 	];
 
+	private const native_keywords = [
+		"if",
+		"do",
+		"while",
+		"as",
+		"else",
+		"elseif",
+		"foreach",
+		"for",
+		"clone"
+	];
+
+	public function is_modifier(string $modifier): bool {
+		# TODO: add custom modifiers
+		return false;
+	}
+
 	public function is_native_modifier(string $modifier): bool {
 		return in_array($modifier, self::native_modifiers);
+	}
+
+	public function is_native_keyword(string $keyword): bool {
+		return in_array($keyword, self::native_keywords);
+	}
+
+	public function is_native_operator(string $operator): bool {
+		return in_array($operator, self::native_operators);
 	}
 
 	public function get_native_modifier_infos(string $modifier): array {
@@ -272,10 +297,5 @@ class Modifiers {
 		}
 
 		return $infos;
-	}
-
-	public function is_modifier(string $modifier): bool {
-		# TODO: add custom modifiers
-		return false;
 	}
 }
